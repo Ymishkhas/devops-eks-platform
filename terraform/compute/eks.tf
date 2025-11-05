@@ -35,6 +35,9 @@ module "eks" {
     eks-pod-identity-agent = {
       before_compute = true
     }
+    coredns = {
+      before_compute = true
+    }
     aws-ebs-csi-driver     = {}
     aws-efs-csi-driver     = {}
     snapshot-controller    = {}
@@ -67,9 +70,12 @@ module "eks" {
       launch_template_use_name_prefix = false
       use_name_prefix = false
       ami_type       = "AL2023_x86_64_STANDARD"
-      min_size     = 2
-      max_size     = 2
-      desired_size = 2
+      min_size     = 3
+      max_size     = 3
+      desired_size = 3
+
+      use_latest_ami_release_version = false
+      ami_release_version="1.33.5-20251029"
 
       taints = {
         criticalAddons = {
@@ -190,11 +196,6 @@ resource "kubernetes_config_map" "aws_auth" {
         rolearn  = "arn:aws:iam::${var.account_id}:role/eks-karpenter-node-role-${var.organization_name}-${var.environment}"
         username = "system:node:{{EC2PrivateDNSName}}"
         groups   = ["system:bootstrappers", "system:nodes"]
-      },
-      {
-        rolearn  = "arn:aws:iam::${var.account_id}:role/techrar"
-        username = "techrar"
-        groups   = ["system:masters"]
       }
     ])
     
@@ -203,6 +204,11 @@ resource "kubernetes_config_map" "aws_auth" {
       {
         userarn  = "arn:aws:iam::${var.account_id}:user/yousef.mishkhas@techrar.com"
         username = "yousef.mishkhas@techrar.com"
+        groups   = ["system:masters"]
+      },
+      {
+        userarn  = "arn:aws:iam::${var.account_id}:user/terraform-cloud"
+        username = "terraform-cloud"
         groups   = ["system:masters"]
       }
     ])
