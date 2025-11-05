@@ -1,0 +1,15 @@
+.terraform
+**.lock.hcl
+.lock
+**.tfstate
+**.tfstate.backup
+**.tfstate.*.backup
+**.tfstate.lock.info
+**.auto.tfvars
+**.decrypted~*
+
+.DS_Store
+local/**
+**/__pycache__/**
+
+trash/**
