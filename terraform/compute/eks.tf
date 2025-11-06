@@ -75,7 +75,14 @@ module "eks" {
       desired_size = 3
 
       use_latest_ami_release_version = false
-      ami_release_version="1.33.5-20251029"
+      ami_release_version="1.33.5-20251103"
+
+      metadata_options = {
+        http_endpoint               = "enabled"
+        http_tokens                 = "required"
+        http_put_response_hop_limit = 3
+        "HttpProtocolIpv6": "disabled"
+      }
 
       taints = {
         criticalAddons = {
