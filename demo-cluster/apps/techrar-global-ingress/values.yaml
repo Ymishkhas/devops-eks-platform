@@ -1,0 +1,114 @@
+raw:
+  resources:
+  # Istio Gateway (Layer 1: Entry Point)
+  - apiVersion: networking.istio.io/v1
+    kind: Gateway
+    metadata:
+      name: global-ymishkhas-gateway
+      namespace: istio-system
+    spec:
+      selector:
+        istio: gateway 
+      servers:
+      - port:
+          number: 80
+          name: http
+          protocol: HTTP
+        hosts:
+        - "*"
+
+  # VirtualService: ArgoCD
+  - apiVersion: networking.istio.io/v1
+    kind: VirtualService
+    metadata:
+      name: argocd
+      namespace: argocd
+    spec:
+      gateways:
+        - istio-system/global-ymishkhas-gateway
+      hosts:
+        - argocd.localhost
+      http:
+        - match:
+            - uri:
+                prefix: /
+          route:
+            - destination:
+                host: argocd-server.argocd.svc.cluster.local
+                port:
+                  number: 80
+
+  # VirtualService: Grafana
+  - apiVersion: networking.istio.io/v1
+    kind: VirtualService
+    metadata:
+      name: grafana
+      namespace: monitoring
+    spec:
+      gateways:
+        - istio-system/global-ymishkhas-gateway
+      hosts:
+        - grafana.localhost
+      http:
+        - match:
+            - uri:
+                prefix: /
+          route:
+            - destination:
+                host: observability-grafana.monitoring.svc.cluster.local
+                port:
+                  number: 80
+
+  # VirtualService: Prometheus
+  - apiVersion: networking.istio.io/v1
+    kind: VirtualService
+    metadata:
+      name: prometheus
+      namespace: monitoring
+    spec:
+      gateways:
+        - istio-system/global-ymishkhas-gateway
+      hosts:
+        - prometheus.localhost
+      http:
+        - match:
+            - uri:
+                prefix: /
+          route:
+            - destination:
+                host: observability-kube-prometh-prometheus.monitoring.svc.cluster.local
+                port:
+                  number: 9090
+
+  # ServiceMonitors for Istio Metrics
+  - apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: istio-gateway
+      namespace: istio-system
+      labels:
+        release: observability 
+    spec:
+      selector:
+        matchLabels:
+          istio: gateway
+      endpoints:
+      - interval: 30s
+        path: /stats/prometheus
+        port: http-envoy-prom
+
+  - apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: istio-istiod
+      namespace: istio-system
+      labels:
+        release: observability
+    spec:
+      selector:
+        matchLabels:
+          app: istiod
+      endpoints:
+      - interval: 30s
+        path: /metrics
+        port: http-monitoring

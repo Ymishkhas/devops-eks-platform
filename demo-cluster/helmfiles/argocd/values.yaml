@@ -1,0 +1,419 @@
+# =============================================================================
+# Configuration for ArgoCD Helm chart
+# Supports both Kind (development) and EKS (production) environments
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# CRDs (Custom Resource Definitions)
+# -----------------------------------------------------------------------------
+# Install Application, AppProject, and other ArgoCD CRDs
+crds:
+  install: true
+  keep: true
+
+# -----------------------------------------------------------------------------
+# GLOBAL SETTINGS - Applied to all ArgoCD components
+# -----------------------------------------------------------------------------
+global:
+  # Domain for ArgoCD UI access
+  domain: argocd.localhost  # KIND
+  # domain: argocd.ymishkhas.cloud  # EKS
+  
+  # How many old ReplicaSets to keep for rollback
+  revisionHistoryLimit: 3
+  
+  # Pod labels for cost tracking and log retention policies
+  podLabels:
+    app: argocd
+    managed-by: helmfile
+  
+  # Logging configuration
+  logging:
+    format: text
+    level: info
+  
+  # Add Prometheus scrape annotations to services
+  addPrometheusAnnotations: true
+
+# -----------------------------------------------------------------------------
+# CONFIGS - ArgoCD Behavior Configuration
+# -----------------------------------------------------------------------------
+configs:
+  # ConfigMap: argocd-cm (main configuration)
+  cm:
+    create: true
+    url: https://argocd.localhost  # KIND
+    # url: https://argocd.ymishkhas.cloud  # EKS    
+    exec.enabled: true    
+    timeout.reconciliation: 180s    
+    statusbadge.enabled: true    
+    admin.enabled: true    
+    kustomize.buildOptions: "--enable-alpha-plugins"
+    
+    # CRITICAL: SOPS Integration
+    # Allows ArgoCD to decrypt secrets files
+    helm.valuesFileSchemes: >-
+      secrets+gpg-import, secrets+gpg-import-kubernetes,
+      secrets+age-import, secrets+age-import-kubernetes,
+      secrets,
+      https
+  
+  params:
+    create: true    
+    server.insecure: true
+  
+  # ConfigMap: argocd-rbac-cm (RBAC policies)
+  rbac:
+    create: true
+    
+    # RBAC policy rules (optional - start with defaults)
+    # Format: p, role, resource, action, object, effect
+    # Example: p, role:readonly, applications, get, */*, allow
+    policy.csv: |
+      # Default policies (admin has all permissions)
+      g, admin, role:admin
+  
+  # # SSH known hosts for Git repositories
+  # # Prevents "unknown host" errors when cloning repos
+  # ssh:
+  #   knownHosts: |
+  #     github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+  #     github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+  #     github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+
+# -----------------------------------------------------------------------------
+# APPLICATION CONTROLLER - Watches Application resources and syncs Git state to cluster
+# -----------------------------------------------------------------------------
+controller:
+  replicas: 1
+  resources:
+    limits:
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: observability  # Must match Prometheus release name
+
+# -----------------------------------------------------------------------------
+# REDIS - State Storage - Stores cache and temporary data
+# -----------------------------------------------------------------------------
+redis:
+  enabled: true  # ← KIND (single Redis instance)
+  
+# redis-ha:
+#   enabled: true  # ← EKS (Redis cluster with sentinel)
+
+# -----------------------------------------------------------------------------
+# ARGOCD SERVER - UI and API server (what users interact with)
+# -----------------------------------------------------------------------------
+server:
+  replicas: 1  # ← KIND
+  # replicas: 2  # ← EKS (for HA)
+  
+  service:
+    type: ClusterIP  # Istio Gateway will expose this externally
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: observability
+  
+  resources:
+    limits:
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# -----------------------------------------------------------------------------
+# REPO SERVER (Important for SOPS) - Handles Git cloning, Helm rendering, and SOPS decryption
+# -----------------------------------------------------------------------------
+repoServer:
+  replicas: 1  # ← KIND
+  # replicas: 2  # ← EKS
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: observability
+
+  # serviceAccount:
+  #   create: true
+  #   name: eks-argocd-demo
+  #   annotations:
+  #     eks.amazonaws.com/role-arn: "arn:aws:iam::412514615512:role/eks-sa-argocd-demo"
+  #   automountServiceAccountToken: true
+
+  
+  # Environment variables for helm-secrets plugin
+  # env:
+  #   - name: ARGOCD_GIT_ATTEMPTS_COUNT
+  #     value: "3"
+    
+  #   # Helm plugin directory
+  #   - name: HELM_PLUGINS
+  #     value: /custom-tools/helm-plugins/
+    
+  #   # Tool paths (installed by init container)
+  #   - name: HELM_SECRETS_SOPS_PATH
+  #     value: /custom-tools/sops
+  #   - name: HELM_SECRETS_KUBECTL_PATH
+  #     value: /custom-tools/kubectl
+  #   - name: HELM_SECRETS_CURL_PATH
+  #     value: /custom-tools/curl
+    
+  #   # Use SOPS as backend for helm-secrets
+  #   - name: HELM_SECRETS_BACKEND
+  #     value: sops
+    
+  #   # Security settings for helm-secrets
+  #   - name: HELM_SECRETS_VALUES_ALLOW_SYMLINKS
+  #     value: "false"
+  #   - name: HELM_SECRETS_VALUES_ALLOW_ABSOLUTE_PATH
+  #     value: "true"
+  #   - name: HELM_SECRETS_VALUES_ALLOW_PATH_TRAVERSAL
+  #     value: "false"
+  
+  # # Volumes for storing downloaded tools
+  # volumes:
+  #   - name: custom-tools
+  #     emptyDir: {}
+  
+  # volumeMounts:
+  #   - mountPath: /custom-tools
+  #     name: custom-tools
+  
+  # # Init container that downloads SOPS and helm-secrets
+  # # This runs BEFORE the main repo-server container starts
+  # initContainers:
+  #   - name: download-tools
+  #     image: alpine:latest
+  #     imagePullPolicy: IfNotPresent
+  #     command: [sh, -ec]
+      
+  #     # Tool versions (update as needed)
+  #     env:
+  #       - name: HELM_SECRETS_VERSION
+  #         value: "4.6.5"
+  #       - name: KUBECTL_VERSION
+  #         value: "1.33.0"
+  #       - name: VALS_VERSION
+  #         value: "0.42.0"
+  #       - name: SOPS_VERSION
+  #         value: "v3.10.2"
+  #       - name: HELM_VERSION
+  #         value: "3.17.0"
+      
+  #     # Download script
+  #     args:
+  #       - |
+  #         set -e
+  #         mkdir -p /custom-tools/helm-plugins
+  #         cd /custom-tools
+          
+  #         # Install curl and git
+  #         apk add --no-cache curl git
+          
+  #         # Copy curl binary for helm-secrets
+  #         cp /usr/bin/curl ./curl
+          
+  #         # Download kubectl
+  #         echo "Downloading kubectl..."
+  #         curl -sSfL -o kubectl https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl
+  #         chmod +x kubectl
+          
+  #         # Download SOPS
+  #         echo "Downloading SOPS..."
+  #         curl -sSfL -o sops https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.amd64
+  #         chmod +x sops
+
+  #         # Download VALS
+  #         echo "Downloading VALS ${VALS_VERSION}..."
+  #         curl -fsSL https://github.com/helmfile/vals/releases/download/v${VALS_VERSION}/vals_${VALS_VERSION}_linux_amd64.tar.gz | tar -xzf- vals
+  #         chmod +x vals
+          
+  #         # Download Helm
+  #         echo "Downloading Helm..."
+  #         curl -sSfL https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz | tar xz
+  #         mv linux-amd64/helm ./helm
+  #         chmod +x helm
+          
+  #         # Install helm-secrets plugin
+  #         echo "Installing helm-secrets ${HELM_SECRETS_VERSION}..."
+  #         mkdir -p helm-plugins
+  #         export HELM_PLUGINS=/custom-tools/helm-plugins
+  #         export HELM_SECRETS_SOPS_PATH=/custom-tools/sops
+  #         export HELM_SECRETS_VALS_PATH=/custom-tools/vals
+  #         export HELM_SECRETS_KUBECTL_PATH=/custom-tools/kubectl
+  #         export HELM_SECRETS_CURL_PATH=/custom-tools/curl
+
+  #         # Install helm-secrets plugin using the downloaded helm binary
+  #         ./helm plugin install https://github.com/jkroepke/helm-secrets --version ${HELM_SECRETS_VERSION}
+  #         echo "All tools installed successfully"
+  #         ls -la /custom-tools/
+      
+  #     volumeMounts:
+  #       - mountPath: /custom-tools
+  #         name: custom-tools
+  
+
+  # See https://github.com/jkroepke/helm-secrets/wiki/ArgoCD-Integration#option-2-init-container
+  env:
+    - name: ARGOCD_GIT_ATTEMPTS_COUNT
+      value: "3"
+    
+    - name: HELM_PLUGINS
+      value: /gitops-tools/helm-plugins/
+    - name: HELM_SECRETS_CURL_PATH
+      value: /gitops-tools/curl
+    - name: HELM_SECRETS_SOPS_PATH
+      value: /gitops-tools/sops
+    - name: HELM_SECRETS_VALS_PATH
+      value: /gitops-tools/vals
+    - name: HELM_SECRETS_KUBECTL_PATH
+      value: /gitops-tools/kubectl
+    - name: HELM_SECRETS_BACKEND
+      value: sops
+    
+    # Security settings
+    - name: HELM_SECRETS_VALUES_ALLOW_SYMLINKS
+      value: "false"
+    - name: HELM_SECRETS_VALUES_ALLOW_ABSOLUTE_PATH
+      value: "true"
+    - name: HELM_SECRETS_VALUES_ALLOW_PATH_TRAVERSAL
+      value: "false"
+    - name: HELM_SECRETS_WRAPPER_ENABLED
+      value: "true"
+    - name: HELM_SECRETS_DECRYPT_SECRETS_IN_TMP_DIR
+      value: "true"
+    - name: HELM_SECRETS_HELM_PATH
+      value: /usr/local/bin/helm
+  
+  # Volumes
+  volumes:
+    - name: gitops-tools
+      emptyDir: {}
+  
+  volumeMounts:
+    - mountPath: /gitops-tools
+      name: gitops-tools
+    - mountPath: /usr/local/sbin/helm
+      subPath: helm
+      name: gitops-tools
+  
+  # Fixed init container with curl instead of wget
+  initContainers:
+    - name: download-tools
+      image: alpine:latest
+      imagePullPolicy: IfNotPresent
+      command: [sh, -ec]
+      env:
+        - name: HELM_SECRETS_VERSION
+          value: "4.6.11"
+        - name: KUBECTL_VERSION
+          value: "1.31.0"
+        - name: VALS_VERSION
+          value: "0.42.0"
+        - name: SOPS_VERSION
+          value: "3.9.1"
+      args:
+        - |
+          set -e
+          
+          # Install curl (Alpine needs this explicitly)
+          apk add --no-cache curl tar gzip
+          
+          mkdir -p /gitops-tools/helm-plugins
+          cd /gitops-tools
+          
+          # Hardcode architecture to avoid Windows issues
+          ARCH=amd64
+          
+          echo "Downloading curl binary..."
+          curl -sSfL -o curl https://github.com/moparisthebest/static-curl/releases/latest/download/curl-${ARCH}
+          chmod +x curl
+          
+          echo "Downloading kubectl..."
+          curl -sSfL -o kubectl https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/${ARCH}/kubectl
+          chmod +x kubectl
+          
+          echo "Downloading SOPS..."
+          curl -sSfL -o sops https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.${ARCH}
+          chmod +x sops
+          
+          echo "Downloading VALS..."
+          curl -sSfL https://github.com/helmfile/vals/releases/download/v${VALS_VERSION}/vals_${VALS_VERSION}_linux_${ARCH}.tar.gz | tar -xz vals
+          chmod +x vals
+          
+          echo "Downloading helm-secrets plugin..."
+          curl -sSfL https://github.com/jkroepke/helm-secrets/releases/download/v${HELM_SECRETS_VERSION}/helm-secrets.tar.gz | tar -xz -C helm-plugins
+          
+          echo "Creating helm wrapper..."
+          cp helm-plugins/helm-secrets/scripts/wrapper/helm.sh ./helm
+          chmod +x helm
+          
+          echo "✅ All tools installed successfully!"
+          ls -lah /gitops-tools/
+      
+      volumeMounts:
+        - mountPath: /gitops-tools
+          name: gitops-tools
+
+    
+    # KIND: No annotations needed (uses local AWS credentials)
+    # EKS: Needs IRSA annotation for KMS access
+    # annotations:
+    #   eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT_ID:role/argocd-sops-role"  # EKS
+  
+  # Resource limits
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+# -----------------------------------------------------------------------------
+# APPLICATION SET CONTROLLER
+# -----------------------------------------------------------------------------
+applicationSet:
+  enabled: true
+  replicas: 1
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: observability
+
+# -----------------------------------------------------------------------------
+# DEX (SSO - Optional) Google/GitHub SSO integration
+# -----------------------------------------------------------------------------
+dex:
+  enabled: false
+
+# =============================================================================
+# MIGRATION NOTES (Kind → EKS)
+# =============================================================================
+#
+# When moving from Kind to EKS, change:
+# 1. global.domain: argocd.localhost → argocd.ymishkhas.cloud
+# 2. configs.cm.url: https://argocd.localhost → https://argocd.ymishkhas.cloud
+# 3. redis.enabled: true → false
+# 4. redis-ha.enabled: false → true (if wanting HA)
+# 5. server.replicas: 1 → 2
+# 6. repoServer.replicas: 1 → 2
+# 7. repoServer.serviceAccount.annotations: Uncomment IRSA role
+#
+# =============================================================================

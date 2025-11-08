@@ -1,0 +1,9 @@
+{{- /* iterate over raw.resources. Each item is a map (object) representing a k8s manifest. */ -}}
+{{- if .Values.raw.resources }}
+{{- range $i, $res := .Values.raw.resources }}
+---
+{{- $res | toYaml | nindent 0 }}
+{{- end }}
+{{- else }}
+# no resources provided in values.raw.resources
+{{- end }}

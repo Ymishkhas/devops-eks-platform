@@ -1,0 +1,5 @@
+apiVersion: v2
+name: raw
+type: application
+version: 1.0.0
+description: "Render raw k8s resources from values.raw.resources"

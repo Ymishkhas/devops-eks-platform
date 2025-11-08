@@ -1,0 +1,30 @@
+projects:
+  utilities:
+    description: Infrastructure and platform utilities
+    namespace: argocd
+    
+    # Which Git repositories can be sources for apps in this project
+    sourceRepos:
+      - '*'  # Allow all repos (can restrict later)
+    
+    # Where apps in this project can be deployed
+    destinations:
+      - namespace: '*'
+        server: '*'
+    
+    # Which cluster-scoped resources can be created
+    # utilities needs broad permissions (CRDs, ClusterRoles, etc.)
+    clusterResourceWhitelist:
+      - group: '*'
+        kind: '*'
+  core:
+    description: core applications
+    namespace: argocd
+    sourceRepos:
+      - '*'
+    destinations:
+      - namespace: '*'
+        server: '*'
+    clusterResourceWhitelist:
+      - group: '*'
+        kind: '*'

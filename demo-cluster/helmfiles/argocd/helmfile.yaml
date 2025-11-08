@@ -1,0 +1,121 @@
+# =============================================================================
+# HELMFILE FOR ARGOCD INSTALLATION
+# =============================================================================
+# This file orchestrates the installation of ArgoCD and its dependencies.
+# It handles both Kind (local) and EKS (production) deployments.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# ENVIRONMENTS (Optional - only needed if using ChartMuseum)
+# -----------------------------------------------------------------------------
+# Loads external YAML files with sensitive credentials
+# The chartmuseum.yaml should contain: url, username, password
+# -----------------------------------------------------------------------------
+# environments:
+#   default:
+#     secrets:
+#       - ../../../chartmuseum.yaml
+
+---
+
+# -----------------------------------------------------------------------------
+# HELM DEFAULTS
+# -----------------------------------------------------------------------------
+# Global settings applied to all releases unless overridden
+# -----------------------------------------------------------------------------
+helmDefaults:
+  # verify: false - Skip chart signature verification (faster for development)
+  verify: false
+  
+  # wait: true - Wait for resources to be ready before marking release as successful
+  # IMPORTANT: Ensures ArgoCD is fully running before proceeding
+  wait: true
+  
+  # timeout: 600s (10 minutes) - How long to wait for resources
+  # ArgoCD can take 2-5 minutes to fully start with all components
+  timeout: 600
+  
+  # createNamespace: true - Automatically create target namespace if missing
+  createNamespace: true
+  
+  # cleanupOnFail: true - Delete failed releases to allow retry
+  cleanupOnFail: true
+  
+  # force: false - Don't force resource updates (safer)
+  force: false
+  
+  # Kubernetes context to use
+  # KIND: Use 'kind-kind' (default Kind cluster name)
+  # EKS: Use full cluster ARN
+  # kubeContext: kind-demo  # KIND
+  kubeContext: arn:aws:eks:us-east-1:412514615512:cluster/eks-techrar-demo  # EKS
+
+# -----------------------------------------------------------------------------
+# HELM REPOSITORIES
+# -----------------------------------------------------------------------------
+# Defines where to download Helm charts from
+# -----------------------------------------------------------------------------
+repositories:
+  # Official ArgoCD Helm charts repository
+  - name: argo
+    url: https://argoproj.github.io/argo-helm
+
+# -----------------------------------------------------------------------------
+# RELEASES
+# -----------------------------------------------------------------------------
+# Helm charts to install, in order
+# Each release is independent but can depend on others
+# -----------------------------------------------------------------------------
+releases:
+  # ---------------------------------------------------------------------------
+  # RELEASE 1: ArgoCD Core
+  # ---------------------------------------------------------------------------
+  # The main ArgoCD application (API server, repo server, controller, etc.)
+  # ---------------------------------------------------------------------------
+  - name: argocd
+    chart: argo/argo-cd    
+    namespace: argocd    
+    version: 8.3.1    
+    createNamespace: true    
+    values:
+      - ./values.yaml
+    # secrets:
+    #   - ./secrets.yaml
+      # - ./repos-secrets.yaml
+  
+  # ---------------------------------------------------------------------------
+  # RELEASE 2: ArgoCD Projects
+  # ---------------------------------------------------------------------------
+  # Creates ArgoCD Projects (RBAC boundaries for applications)
+  # This release depends on ArgoCD being installed first
+  # ---------------------------------------------------------------------------
+  - name: argocd-projects
+    namespace: argocd
+    chart: argo/argocd-apps    
+    version: 2.0.2    
+    values:
+      - projects.yaml
+
+# =============================================================================
+# DEPLOYMENT INSTRUCTIONS
+# =============================================================================
+#
+# 1. SETUP (one-time):
+#    - Ensure SOPS is installed
+#    - Ensure Helmfile is installed
+#    - Configure AWS credentials for KMS access
+#
+# 2. DEPLOY TO KIND:
+#    helmfile apply
+#
+# 3. DEPLOY TO EKS:
+#    - Uncomment EKS kubeContext above
+#    - Comment out Kind kubeContext
+#    - Run: helmfile apply
+#
+# 4. VERIFY:
+#    kubectl get pods -n argocd
+#    kubectl port-forward -n argocd svc/argocd-server 8080:443
+#    # Access at https://localhost:8080
+#
+# =============================================================================

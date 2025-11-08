@@ -1,0 +1,35 @@
+# environments:
+#   default:
+#     secrets:
+#       - ../../../chartmuseum.yaml
+---
+
+# Monitoring stack orchestrator
+helmDefaults:
+  verify: false
+  wait: true
+  timeout: 600
+  createNamespace: true
+  cleanupOnFail: true
+  kubeContext: kind-demo  # KIND
+  # kubeContext: arn:aws:eks:us-east-1:412514615512:cluster/eks-techrar-demo  # EKS
+
+repositories:
+  - name: prometheus-community
+    url: https://prometheus-community.github.io/helm-charts
+
+---
+releases:
+  # Main monitoring stack (Prometheus + Grafana + AlertManager)
+  - name: observability
+    chart: prometheus-community/kube-prometheus-stack
+    version: 75.6.0
+    namespace: monitoring
+    createNamespace: true
+    values:
+      - ./prometheus/values.yaml
+      - ./grafana/values.yaml
+      - ./alertmanager/values.yaml
+    secrets:
+      - ./grafana/secrets.yaml
+      - ./alertmanager/receivers.yaml

@@ -1,0 +1,67 @@
+istiod:
+  meshConfig:
+    enablePrometheusMerge: true
+
+gateway:
+  name: "istio-gateway"
+  rbac:
+    enabled: true
+  service:
+    type: ClusterIP # For Kind local testing
+    # type: LoadBalancer  # Creates AWS CLB
+    # annotations:
+    #   service.beta.kubernetes.io/aws-load-balancer-type: "classic"
+    #   service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    ports:
+    - name: status-port
+      port: 15021
+      protocol: TCP
+      targetPort: 15021
+    - name: http-envoy-prom
+      port: 15090
+      protocol: TCP
+      targetPort: 15090
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 443
+    - name: http-tunnel
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    - name: https-tunnel
+      port: 8443
+      protocol: TCP
+      targetPort: 8443
+  resources:
+    requests:
+      cpu: 150m
+      memory: 150Mi
+    limits:
+      memory: 400Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+    autoscaleBehavior: {}
+  env: {}
+  # minReadySeconds:
+  labels:
+    retention: low
+    cost-center: istio
+    sub-unit: gateway
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                istio: gateway
+            topologyKey: kubernetes.io/hostname

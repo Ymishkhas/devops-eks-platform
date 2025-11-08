@@ -1,0 +1,287 @@
+alloy:
+  rbac:
+    create: true
+
+  controller:
+    type: daemonset
+    replicas: 1
+    affinity: {}
+    volumes:
+      extra: []
+    volumeClaimTemplates: []
+    initContainers: []
+    extraContainers: []
+    tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      - key: karpenter.sh/disrupted
+        operator: Exists
+        effect: NoSchedule
+      - key: CriticalAddonsOnly
+        operator: Exists
+        effect: NoSchedule
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoSchedule
+
+  alloy:
+    resources:
+      requests:
+        cpu: "30m"
+        memory: "80Mi"
+      limits:
+        memory: "170Mi"
+    clustering:
+      enabled: false
+      name: "eks-techrar-demo"
+      portName: http
+    configMap:
+      create: true
+      content: |-
+        discovery.kubernetes "pod" {
+          role = "pod"
+        }
+        
+        discovery.relabel "pod_logs" {
+          targets = discovery.kubernetes.pod.targets
+
+          // Label creation - "namespace" field from "__meta_kubernetes_namespace"
+          rule {
+            source_labels = ["__meta_kubernetes_namespace"]
+            action = "replace"
+            target_label = "namespace"
+          }
+
+          // Label creation - "pod" field from "__meta_kubernetes_pod_name"
+          rule {
+            source_labels = ["__meta_kubernetes_pod_name"]
+            action = "replace"
+            target_label = "pod"
+          }
+
+          // Label creation - "container" field from "__meta_kubernetes_pod_container_name"
+          rule {
+            source_labels = ["__meta_kubernetes_pod_container_name"]
+            action = "replace"
+            target_label = "container"
+          }
+
+          // Label creation - "app" field: prioritize "__meta_kubernetes_pod_label_app" over "__meta_kubernetes_pod_label_app_kubernetes_io_name"
+          rule {
+            source_labels = ["__meta_kubernetes_pod_label_app"]
+            action = "replace"
+            target_label = "app"
+            regex = "(.+)"
+            replacement = "$1"
+          }
+
+          // Fallback to app.kubernetes.io/name if app label is not present
+          rule {
+            source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+            action = "replace"
+            target_label = "app"
+            regex = "(.+)"
+            replacement = "$1"
+          }
+
+          // Label creation -  "job" field from "__meta_kubernetes_namespace" only (reduced cardinality)
+          rule {
+            source_labels = ["__meta_kubernetes_namespace"]
+            action = "replace"
+            target_label = "job"
+            replacement = "$1"
+          }
+
+          // Label creation - "_path_" field from "__meta_kubernetes_pod_uid" and "__meta_kubernetes_pod_container_name"
+          // Concatenate values __meta_kubernetes_pod_uid/__meta_kubernetes_pod_container_name.log
+          rule {
+            source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+            action = "replace"
+            target_label = "_path_"
+            separator = "/"
+            replacement = "/var/log/pods/$1/.log"
+          }
+
+          // Label creation -  "detected_level" field: set to 'error' if log line contains 'error' (case-insensitive)
+          rule {
+            source_labels = ["_log_"]
+            action = "replace"
+            target_label = "detected_level"
+            regex = ".(?i)error."
+            replacement = "error"
+          }
+
+          // Label creation -  "detected_level" field: set to 'warning' if log line contains 'warn' (case-insensitive)
+          rule {
+            source_labels = ["_log_"]
+            action = "replace"
+            target_label = "detected_level"
+            regex = ".(?i)warn."
+            replacement = "warning"
+          }
+
+          // Label creation -  "detected_level" field: default to 'info' if not set
+          rule {
+            source_labels = ["detected_level"]
+            action = "replace"
+            target_label = "detected_level"
+            regex = "^$"
+            replacement = "info"
+          }
+
+          // Label creation -  "datacenter" field from environment variable "DATACENTER", default to "prod-main-eks"
+          rule {
+            source_labels = []
+            action = "replace"
+            target_label = "datacenter"
+            replacement = "eks-techrar-dev"
+          }
+
+          // Label creation -  "retention" field from "__meta_kubernetes_pod_label_retention"
+          rule {
+            source_labels = ["__meta_kubernetes_pod_label_retention"]
+            action = "replace"
+            target_label = "retention"
+            replacement = "$1"
+          }
+
+          // Label creation -  "retention" field from "retention" defaults to "low"
+          rule {
+            source_labels = ["retention"]
+            action = "replace"
+            target_label = "retention"
+            regex = "^$"
+            replacement = "low"
+          }
+
+          // drop if retention=drop
+          rule {
+            source_labels = ["retention"]
+            regex = "drop"
+            action = "drop"
+          }
+
+          // Label creation - "node_name" field from "__meta_kubernetes_pod_node_name"
+          rule {
+            source_labels = ["__meta_kubernetes_pod_node_name"]
+            action = "replace"
+            target_label = "node_name"
+            replacement = "$1"
+          }
+        }
+        
+        // loki.source.kubernetes tails logs from Kubernetes containers using the Kubernetes API.
+        loki.source.kubernetes "pod_logs" {
+          targets    = discovery.relabel.pod_logs.output
+          forward_to = [loki.process.log_filtering.receiver]
+        }
+
+        // Log processing stage to filter out unwanted logs and reduce volume
+        loki.process "log_filtering" {
+          forward_to = [loki.write.default.receiver]
+
+          // Drop 2xx response codes from istio-ingressgateway
+          stage.match {
+            selector = "{app=\"istio-ingressgateway\"}"
+            stage.drop {
+              expression = ".+HTTP/[0-9.]+\"\\s+2\\d\\d.+"
+            }
+          }
+
+          // Drop frequent noisy system logs
+          stage.match {
+            selector = "{namespace=\"kube-system\"}"
+            stage.drop {
+              expression = ".(kubelet|kube-proxy).: [Ss]uccess|[Cc]omplete.*"
+            }
+          }
+
+          // Sample high-volume containers (keep only 1 in 5 logs)
+          stage.match {
+            selector = "{container=~\"node-cache|coredns|.proxy.\"}"
+            stage.sampling {
+              rate = 0.2
+            }
+          }
+        }
+        
+        loki.write "default" {
+          endpoint {
+            url = "http://loki-gateway/loki/api/v1/push"
+
+            // Batch configuration to reduce load and send smaller batches
+            batch_wait = "5s"
+            batch_size = "512KB"   // Reduced from default 1024KB
+
+            // Rate limiting configuration
+            max_backoff_period = "1m"
+            min_backoff_period = "500ms"
+            max_backoff_retries = 5
+            retry_on_http_429 = false
+          }
+        }
+    enableHttpServerPort: true
+    listenAddr: 0.0.0.0
+    listenPort: 12345
+    listenScheme: HTTP
+    initialDelaySeconds: 10
+    timeoutSeconds: 1
+    uiPathPrefix: /
+    enableReporting: true
+
+  serviceAccount:
+    create: true
+    additionalLabels: {}
+    annotations: {}
+    name: "alloy"
+    automountServiceAccountToken: true
+
+  networkPolicy:
+    enabled: false
+    flavor: kubernetes
+    policyTypes:
+    - Ingress
+    - Egress
+    ingress:
+    - {}
+    egress:
+    - {}
+  service:
+    enabled: true
+    type: ClusterIP
+    nodePort: 31128
+    clusterIP: ''
+    internalTrafficPolicy: Cluster
+    annotations: {}
+  serviceMonitor:
+    enabled: true
+    additionalLabels:
+      release: observability
+    interval: ""
+    metricRelabelings: []
+    # - action: keep
+    #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+    #   sourceLabels: [_name_]
+    tlsConfig: {}
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+  extraObjects: []
+  # - apiVersion: v1
+  #   kind: Secret
+  #   metadata:
+  #     name: grafana-cloud
+  #   stringData:
+  #     PROMETHEUS_HOST: 'https://prometheus-us-central1.grafana.net/api/prom/push'
+  #     PROMETHEUS_USERNAME: '123456'

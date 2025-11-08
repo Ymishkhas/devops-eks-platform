@@ -1,0 +1,8 @@
+app:
+  name: techrar-global-routers
+  releaseName: techrar-ingress
+  namespace: default
+  project: utilities
+  values: values.yaml
+  extraValues: ../dummy.yaml
+  secrets: secrets.yaml

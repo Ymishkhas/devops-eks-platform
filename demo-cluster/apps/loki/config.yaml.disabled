@@ -1,0 +1,8 @@
+app:
+  name: loki
+  releaseName: loki
+  namespace: monitoring
+  project: utilities
+  values: values.yaml
+  extraValues: alloy.yaml
+  secrets: secrets.yaml

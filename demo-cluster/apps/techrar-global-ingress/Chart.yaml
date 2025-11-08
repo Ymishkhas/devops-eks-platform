@@ -1,0 +1,9 @@
+apiVersion: v2
+name: raw
+type: application
+version: 1.0.0
+dependencies:
+  - name: raw
+    repository: "file://../../../../custom-charts/raw"
+    version: v1.0.0
+    alias: raw

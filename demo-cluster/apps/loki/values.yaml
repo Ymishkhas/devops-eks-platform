@@ -1,0 +1,160 @@
+loki:
+  deploymentMode: SimpleScalable
+  
+  loki:
+    auth_enabled: false  # No multi-tenancy
+
+    compactor:
+      compaction_interval: 10m
+      retention_enabled: true
+      retention_delete_delay: 2h
+      retention_delete_worker_count: 150
+      delete_request_store: s3
+
+    podLabels:
+      cost-center: loki
+      sub-unit: loki
+      retention: drop
+    
+    storage:
+      bucketNames:
+        chunks: eks-loki-logs-demo-yousef
+        ruler: eks-loki-logs-demo-yousef
+        admin: eks-loki-logs-demo-yousef
+      type: s3
+      s3:
+        region: us-east-1
+        s3ForcePathStyle: false
+        insecure: false
+        # -- Check https://grafana.com/docs/loki/latest/configure/#s3_storage_config for more info on how to provide a backoff_config
+        backoff_config:
+          min_period: 100ms
+          max_period: 5s
+          max_retries: 5
+    
+    memcached:
+      chunk_cache:
+        enabled: false
+      results_cache:
+        enabled: false
+
+    schemaConfig:
+      configs:
+        - from: 2024-11-01
+          store: tsdb
+          object_store: s3
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
+    ingester:
+      chunk_encoding: snappy
+
+    tracing:
+      enabled: true
+
+    querier:
+      max_concurrent: 32
+
+    # -- Check https://grafana.com/docs/loki/latest/configuration/#ruler for more info on configuring ruler
+    rulerConfig:
+      external_url: https://grafana.ymishkhas.cloud
+      datasource_uid: Loki
+    
+    # Simple retention: 3 days for everything
+    limits_config:
+      retention_period: 72h
+    
+
+  # Components
+  gateway:
+    enabled: true
+    replicas: 1
+    verboseLogging: false
+    podLabels:
+      cost-center: loki
+      sub-unit: gateway
+      retention: drop
+    resources:
+      limits:
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 50Mi
+    basicAuth:
+      enabled: false
+      username: admin
+      password: admin
+  
+  write:
+    replicas: 1
+    persistence:
+      size: 10Gi
+      storageClass: gp3
+    podLabels:
+      cost-center: loki
+      sub-unit: loki-write
+      retention: drop
+    resources:
+      limits:
+        memory: 1500Mi
+      requests:
+        cpu: 200m
+        memory: 1000Mi
+  
+  read:
+    replicas: 1
+    persistence:
+      size: 10Gi
+      storageClass: gp3
+    podLabels:
+      cost-center: loki
+      sub-unit: loki-read
+      retention: drop
+    resources:
+      limits:
+        memory: 1500Mi
+      requests:
+        cpu: 300m
+        memory: 800Mi
+  
+  backend:
+    replicas: 1
+    persistence:
+      size: 10Gi
+      storageClass: gp3
+    podLabels:
+      cost-center: loki
+      sub-unit: loki-backend
+      retention: drop
+    resources:
+      limits:
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 200Mi
+  
+  # IRSA for S3 access
+  serviceAccount:
+    create: true
+    name: loki-s3-demo
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::412514615512:role/eks-sa-loki-demo"
+    automountServiceAccountToken: true
+  
+  # Monitoring
+  monitoring:
+    rules:
+      enabled: true
+      alerting: true
+      labels:
+        release: observability
+      additionalRuleLabels:
+        team: devops
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: observability
+      metricsInstance:
+        enabled: false

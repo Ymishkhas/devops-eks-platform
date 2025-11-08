@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: demo-cluster-apps
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  - git:
+      repoURL: https://github.com/Ymishkhas/devops-eks-platform
+      revision: "HEAD"
+      files:
+      - path: demo-cluster/apps/*/config.yaml
+  template:
+    metadata:
+      name: "{{.app.name}}-demo"
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io/background
+      annotations:
+        argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+        argocd.argoproj.io/manifest-generate-paths: .
+    spec:
+      project: "{{.app.project}}"
+      source:
+        repoURL: https://github.com/Ymishkhas/devops-eks-platform
+        targetRevision: "HEAD"
+        path: "{{.path.path}}"
+        helm:
+          releaseName: '{{.app.releaseName}}'
+          valueFiles:
+            - "{{ .app.values }}"
+            - "{{ .app.extraValues }}"
+            - "secrets://{{ .app.secrets }}"
+      destination:
+        name: in-cluster
+        namespace: "{{ .app.namespace }}"
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - ApplyOutOfSyncOnly=true
+        automated:
+          prune: true
+          selfHeal: true
+          allowEmpty: true
