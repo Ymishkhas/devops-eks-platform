@@ -1,5 +1,4 @@
-raw:
-  resources:
+resources:
   # Istio Gateway (Layer 1: Entry Point)
   - apiVersion: networking.istio.io/v1
     kind: Gateway

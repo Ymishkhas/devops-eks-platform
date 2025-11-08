@@ -1,9 +1,5 @@
 apiVersion: v2
-name: raw
+name: techrar-global-ingress
 type: application
 version: 1.0.0
-dependencies:
-  - name: raw
-    repository: "file://../../../../custom-charts/raw"
-    version: v1.0.0
-    alias: raw
+description: "Global Istio routing configuration"
