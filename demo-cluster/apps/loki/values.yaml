@@ -53,6 +53,11 @@ loki:
 
     tracing:
       enabled: true
+    
+    # Replication factor - set to 1 for single replica setups (dev/test)
+    # For production, set to 3 and scale write replicas to 3+
+    commonConfig:
+      replication_factor: 1
 
     querier:
       max_concurrent: 32
