@@ -15,6 +15,15 @@ resources:
           protocol: HTTP
         hosts:
         - "*"
+        tls:
+          httpsRedirect: true
+      # HTTPS - Receives decrypted HTTP traffic from ELB
+      - port:
+          number: 443
+          name: https
+          protocol: HTTP  # HTTP because ELB already decrypted TLS
+        hosts:
+        - "*"
 
   # VirtualService: ArgoCD
   - apiVersion: networking.istio.io/v1
