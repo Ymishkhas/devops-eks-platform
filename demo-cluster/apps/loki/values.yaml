@@ -72,6 +72,13 @@ loki:
     enabled: true
     replicas: 1
     verboseLogging: false
+    
+    tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+    
     podLabels:
       cost-center: loki
       sub-unit: gateway
@@ -89,6 +96,13 @@ loki:
   
   write:
     replicas: 1
+    
+    tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+    
     persistence:
       size: 10Gi
       storageClass: gp3
@@ -105,6 +119,13 @@ loki:
   
   read:
     replicas: 1
+    
+    tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+    
     persistence:
       size: 10Gi
       storageClass: gp3
@@ -121,6 +142,13 @@ loki:
   
   backend:
     replicas: 1
+    
+    tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+    
     persistence:
       size: 10Gi
       storageClass: gp3

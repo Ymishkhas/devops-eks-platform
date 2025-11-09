@@ -33,7 +33,7 @@ helmDefaults:
   
   # timeout: 600s (10 minutes) - How long to wait for resources
   # ArgoCD can take 2-5 minutes to fully start with all components
-  timeout: 600
+  # timeout: 600
   
   # createNamespace: true - Automatically create target namespace if missing
   createNamespace: true
@@ -95,6 +95,8 @@ releases:
     version: 2.0.2    
     values:
       - projects.yaml
+    needs:
+      - argocd
 
 # =============================================================================
 # DEPLOYMENT INSTRUCTIONS

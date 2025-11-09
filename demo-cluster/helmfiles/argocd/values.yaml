@@ -16,8 +16,8 @@ crds:
 # -----------------------------------------------------------------------------
 global:
   # Domain for ArgoCD UI access
-  domain: argocd.localhost  # KIND
-  # domain: argocd.ymishkhas.cloud  # EKS
+  # domain: argocd.localhost  # KIND
+  domain: argocd.ymishkhas.cloud  # EKS
   
   # How many old ReplicaSets to keep for rollback
   revisionHistoryLimit: 3
@@ -42,8 +42,8 @@ configs:
   # ConfigMap: argocd-cm (main configuration)
   cm:
     create: true
-    url: https://argocd.localhost  # KIND
-    # url: https://argocd.ymishkhas.cloud  # EKS    
+    # url: https://argocd.localhost  # KIND
+    url: https://argocd.ymishkhas.cloud  # EKS    
     exec.enabled: true    
     timeout.reconciliation: 180s    
     statusbadge.enabled: true    
@@ -86,6 +86,13 @@ configs:
 # -----------------------------------------------------------------------------
 controller:
   replicas: 1
+  
+  tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  
   resources:
     limits:
       memory: 1Gi
@@ -106,8 +113,19 @@ controller:
 redis:
   enabled: true  # ← KIND (single Redis instance)
   
+  tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  
 # redis-ha:
 #   enabled: true  # ← EKS (Redis cluster with sentinel)
+#   tolerations:
+#     - key: "CriticalAddonsOnly"
+#       operator: "Equal"
+#       value: "true"
+#       effect: "NoSchedule"
 
 # -----------------------------------------------------------------------------
 # ARGOCD SERVER - UI and API server (what users interact with)
@@ -115,6 +133,12 @@ redis:
 server:
   replicas: 1  # ← KIND
   # replicas: 2  # ← EKS (for HA)
+  
+  tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
   
   service:
     type: ClusterIP  # Istio Gateway will expose this externally
@@ -140,6 +164,12 @@ repoServer:
   replicas: 1  # ← KIND
   # replicas: 2  # ← EKS
   
+  tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  
   metrics:
     enabled: true
     serviceMonitor:
@@ -147,12 +177,12 @@ repoServer:
       additionalLabels:
         release: observability
 
-  # serviceAccount:
-  #   create: true
-  #   name: eks-argocd-demo
-  #   annotations:
-  #     eks.amazonaws.com/role-arn: "arn:aws:iam::412514615512:role/eks-sa-argocd-demo"
-  #   automountServiceAccountToken: true
+  serviceAccount:
+    create: true
+    name: eks-argocd-demo
+    annotations:
+      eks.amazonaws.com/role-arn: "arn:aws:iam::412514615512:role/eks-sa-argocd-demo"
+    automountServiceAccountToken: true
 
   
   # Environment variables for helm-secrets plugin
@@ -390,6 +420,12 @@ applicationSet:
   enabled: true
   replicas: 1
   
+  tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  
   metrics:
     enabled: true
     serviceMonitor:
@@ -400,8 +436,8 @@ applicationSet:
 # -----------------------------------------------------------------------------
 # DEX (SSO - Optional) Google/GitHub SSO integration
 # -----------------------------------------------------------------------------
-dex:
-  enabled: false
+# dex:
+#   enabled: false
 
 # =============================================================================
 # MIGRATION NOTES (Kind → EKS)

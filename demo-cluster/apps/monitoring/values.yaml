@@ -1,19 +1,5 @@
 prometheus-stack:
 
-  # Override image registries to avoid quay.io network issues
-  # Use public.ecr.aws which has better connectivity
-  prometheusOperator:
-    image:
-      registry: public.ecr.aws
-      repository: docker/prometheus-operator/prometheus-operator
-      tag: v0.83.0
-
-  prometheus-node-exporter:
-    image:
-      registry: public.ecr.aws
-      repository: docker/prometheus/node-exporter
-      tag: v1.9.1
-
   # Promethueus
   #--------------------------------------------------------------------------------------------------
   # CRDs for Prometheus Operator (ServiceMonitor, PrometheusRule, etc.)
@@ -40,16 +26,16 @@ prometheus-stack:
           memory: 512Mi
       
       # Storage (disabled for Kind, enable for EKS)
-      storageSpec: {}
-      # EKS: Uncomment this
-      # storageSpec:
-      #   volumeClaimTemplate:
-      #     spec:
-      #       storageClassName: gp3
-      #       accessModes: ["ReadWriteOnce"]
-      #       resources:
-      #         requests:
-      #           storage: 30Gi
+      # storageSpec: {}
+      EKS: Uncomment this
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: gp3
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 30Gi
       
       # Which PrometheusRules to watch (must match ArgoCD label)
       ruleSelector:
@@ -182,19 +168,19 @@ prometheus-stack:
     # admin:admin / changeme:changeme
     
     # Persistence (disabled for Kind)
-    persistence:
-      enabled: false
-    # EKS: Enable with EFS
     # persistence:
-    #   enabled: true
-    #   type: pvc
-    #   storageClassName: efs-sc
-    #   existingClaim: pvc-grafana
-    #   accessModes:
-    #     - ReadWriteOnce
-    #   size: 30Gi
-    #   finalizers:
-    #     - kubernetes.io/pvc-protection
+    #   enabled: false
+    # EKS: Enable with EFS
+    persistence:
+      enabled: true
+      type: pvc
+      storageClassName: efs-sc
+      existingClaim: pvc-grafana
+      accessModes:
+        - ReadWriteOnce
+      size: 30Gi
+      finalizers:
+        - kubernetes.io/pvc-protection
 
     # serviceAccount:
     # create: true
@@ -207,8 +193,8 @@ prometheus-stack:
     # Grafana configuration
     grafana.ini:
       server:
-        root_url: http://grafana.localhost  # KIND
-        # root_url: https://grafana.ymishkhas.cloud  # EKS
+        # root_url: http://grafana.localhost  # KIND
+        root_url: https://grafana.ymishkhas.cloud  # EKS
     
     # Auto-import dashboards from ConfigMaps
     sidecar:

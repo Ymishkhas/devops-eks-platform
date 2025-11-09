@@ -1,9 +1,29 @@
+base:
+  tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+
 istiod:
   meshConfig:
     enablePrometheusMerge: true
+  
+  tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
 
 gateway:
   name: "istio-gateway"
+  
+  tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  
   rbac:
     enabled: true
   service:
@@ -56,12 +76,3 @@ gateway:
     retention: low
     cost-center: istio
     sub-unit: gateway
-  affinity:
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-        - weight: 100
-          podAffinityTerm:
-            labelSelector:
-              matchLabels:
-                istio: gateway
-            topologyKey: kubernetes.io/hostname
