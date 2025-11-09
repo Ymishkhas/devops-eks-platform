@@ -433,11 +433,21 @@ applicationSet:
       additionalLabels:
         release: observability
 
-# -----------------------------------------------------------------------------
-# DEX (SSO - Optional) Google/GitHub SSO integration
-# -----------------------------------------------------------------------------
-# dex:
-#   enabled: false
+dex:
+  enabled: true
+  tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+
+notifications:
+  enabled: true
+  tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
 
 # =============================================================================
 # MIGRATION NOTES (Kind → EKS)

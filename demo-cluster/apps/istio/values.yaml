@@ -18,6 +18,11 @@ istiod:
 gateway:
   name: "istio-gateway"
   
+  # Container configuration
+  containers:
+    - name: istio-proxy
+      image: proxyv2
+  
   tolerations:
     - key: "CriticalAddonsOnly"
       operator: "Equal"
@@ -27,11 +32,11 @@ gateway:
   rbac:
     enabled: true
   service:
-    type: ClusterIP # For Kind local testing
-    # type: LoadBalancer  # Creates AWS CLB
-    # annotations:
-    #   service.beta.kubernetes.io/aws-load-balancer-type: "classic"
-    #   service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    # type: ClusterIP # For Kind local testing
+    type: LoadBalancer  # Creates AWS CLB
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "classic"
+      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
     ports:
     - name: status-port
       port: 15021
