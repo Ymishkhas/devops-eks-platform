@@ -1,0 +1,9 @@
+app:
+  name: n8n
+  releaseName: n8n
+  namespace: tools
+  project: data
+  values: values.yaml
+  extraValues: extras.yaml
+  secrets: secrets.yaml
+  serverSideApply: false

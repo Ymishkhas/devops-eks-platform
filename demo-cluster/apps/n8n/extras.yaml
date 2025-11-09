@@ -1,0 +1,41 @@
+n8n:
+  extraManifests:
+    # VirtualService for Istio
+    - apiVersion: networking.istio.io/v1
+      kind: VirtualService
+      metadata:
+        name: n8n
+        namespace: tools
+      spec:
+        gateways:
+          - istio-system/global-ymishkhas-gateway
+        hosts:
+          - n8n.ymishkhas.cloud
+        http:
+          - match:
+              - uri:
+                  prefix: /
+            route:
+              - destination:
+                  host: n8n.tools.svc.cluster.local  # service-name.namespace.svc.cluster.local
+                  port:
+                    number: 80
+    
+    # ServiceMonitor for Prometheus
+    - apiVersion: monitoring.coreos.com/v1
+      kind: ServiceMonitor
+      metadata:
+        name: n8n-metrics
+        namespace: tools
+        labels:
+          release: observability
+      spec:
+        selector:
+          matchLabels:
+            app.kubernetes.io/name: n8n
+            app.kubernetes.io/component: main
+        endpoints:
+          - port: http
+            path: /metrics
+            interval: 30s
+            scrapeTimeout: 10s
