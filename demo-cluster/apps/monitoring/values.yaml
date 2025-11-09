@@ -27,7 +27,7 @@ prometheus-stack:
       
       # Storage (disabled for Kind, enable for EKS)
       # storageSpec: {}
-      EKS: Uncomment this
+      # EKS: Uncomment this
       storageSpec:
         volumeClaimTemplate:
           spec:
@@ -106,6 +106,12 @@ prometheus-stack:
     enabled: true
 
   kube-state-metrics:
+    tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+    
     prometheus:
       monitor:
         enabled: true
@@ -167,20 +173,16 @@ prometheus-stack:
     # Admin credentials (from secrets.yaml)
     # admin:admin / changeme:changeme
     
-    # Persistence (disabled for Kind)
-    # persistence:
-    #   enabled: false
-    # EKS: Enable with EFS
+    # Persistence (disabled for Kind, enable for EKS with EBS gp3)
     persistence:
       enabled: true
       type: pvc
-      storageClassName: efs-sc
-      existingClaim: pvc-grafana
+      storageClassName: gp3
+      # Don't use existingClaim - let it create the PVC automatically
+      # existingClaim: pvc-grafana
       accessModes:
         - ReadWriteOnce
-      size: 30Gi
-      finalizers:
-        - kubernetes.io/pvc-protection
+      size: 10Gi
 
     # serviceAccount:
     # create: true
