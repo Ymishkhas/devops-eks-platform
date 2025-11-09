@@ -289,12 +289,14 @@ prometheus-stack:
             - 'namespace'
         - target_matchers:
             - 'alertname = InfoInhibitor'
-      templateFiles:
-      # ref: https://prometheus.io/docs/alerting/latest/notifications/
-        global.tmpl: |
-          {{ define "URL" }}{{ .ExternalURL | reReplaceAll ".*alertmanager\\.(.*)" "$1" }}{{ end }}
-        discord.tmpl: |
-          {{ define "discord.techrar.title" -}}
+    
+    # Template files for notifications (stored as ConfigMap)
+    # ref: https://prometheus.io/docs/alerting/latest/notifications/
+    templateFiles:
+      global.tmpl: |
+        {{ define "URL" }}{{ .ExternalURL | reReplaceAll ".*alertmanager\\.(.*)" "$1" }}{{ end }}
+      discord.tmpl: |
+        {{ define "discord.techrar.title" -}}
             {{- $first := index .Alerts 0 -}}
             [{{ $first.Status | toUpper }}]
           {{- end }}
