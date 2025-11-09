@@ -1,0 +1,84 @@
+metrics-server:
+  # ref: https://github.com/kubernetes-sigs/metrics-server/tree/master/charts/metrics-server
+  serviceAccount:
+    create: true
+
+  rbac:
+    create: true
+
+  apiService:
+    create: true
+
+  commonLabels: {}
+  podLabels:
+    retention: very-low
+    cost-center: metrics-server
+    sub-unit: metrics-server
+  podAnnotations: {}
+
+  defaultArgs:
+    - --cert-dir=/tmp
+    - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+    - --kubelet-use-node-status-port
+    - --metric-resolution=15s
+
+  args: []
+
+  replicas: 2
+
+  podDisruptionBudget:
+    # https://kubernetes.io/docs/tasks/run-application/configure-pdb/
+    enabled: true
+    minAvailable: 1
+    maxUnavailable:
+
+  service:
+    type: ClusterIP
+    port: 443
+    annotations: {}
+    labels:
+      #  Add these labels to have metrics-server show up in `kubectl cluster-info`
+      kubernetes.io/cluster-service: "true"
+      kubernetes.io/name: "Metrics-server"
+
+  addonResizer:
+    enabled: true
+    resources:
+      requests:
+        cpu: 80m
+        memory: 25Mi
+      limits:
+        cpu: 500m
+        memory: 100Mi
+    nanny:
+      cpu: 0m
+      extraCpu: 1m
+      memory: 0Mi
+      extraMemory: 2Mi
+      minClusterSize: 100
+      pollPeriod: 300000
+      threshold: 5
+
+
+  metrics:
+    enabled: true
+
+  serviceMonitor:
+    enabled: true
+    additionalLabels:
+      release: observability
+
+  # See https://github.com/kubernetes-sigs/metrics-server#scaling
+  resources:
+    requests:
+      cpu: 100m
+      memory: 200Mi
+    limits:
+      cpu: 100m
+      memory: 200Mi
+
+  tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"

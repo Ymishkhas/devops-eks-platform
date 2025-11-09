@@ -1,0 +1,8 @@
+app:
+  name: metrics-server
+  releaseName: metrics-server
+  namespace: kube-system
+  project: utilities
+  values: values.yaml
+  extraValues: ../dummy.yaml
+  secrets: secrets.yaml
