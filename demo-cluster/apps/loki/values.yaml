@@ -37,7 +37,27 @@ loki:
         enabled: false
       results_cache:
         enabled: false
+  
+  # Memcached for caching (if enabled, add tolerations)
+  chunksCache:
+    enabled: false
+    replicas: 0
+    tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+  
+  resultsCache:
+    enabled: false
+    replicas: 0
+    tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
 
+  loki:
     schemaConfig:
       configs:
         - from: 2024-11-01
