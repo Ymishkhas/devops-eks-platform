@@ -33,16 +33,16 @@ n8n:
         #     callback_url: https://n8n.ymishkhas.cloud/rest/oauth2-credential/callback
         #     allowed_domains: techrar.com
       
-      db:
-        type: postgresdb
-        # For external database (production):
-        # postgresdb:
-        #   host: <RDS endpoint>
-        #   port: 5432
-        #   database: n8n
-        #   user: n8n
-      
-      # For queue mode (when using workers):
+      # db:
+      #   type: postgresdb  # Use this for PostgreSQL (external RDS)
+      # SQLite (default) - for development/testing
+      # For external database (production), uncomment and configure:
+      # postgresdb:
+      #   host: <RDS endpoint>
+      #   port: 5432
+      #   database: n8n
+      #   user: n8n
+      #   password: <from secrets>      # For queue mode (when using workers):
       # executions:
       #   mode: queue
       # queue:
@@ -193,29 +193,11 @@ n8n:
   #       size: 5Gi
   #       storageClass: gp3
 
-  # PostgreSQL - Internal database for development/testing
-  postgresql:
-    enabled: true
-    # auth: set in secrets.yaml
-    # auth:
-    #   username: n8n
-    #   database: n8n
-    #   password: "your-strong-db-password"        # Password for n8n database user
-    #   postgresPassword: "your-strong-postgres-password"  # Password for postgres admin user
-    primary:
-      persistence:
-        enabled: true
-        size: 10Gi
-        storageClass: gp3
-      tolerations:
-        - key: "CriticalAddonsOnly"
-          operator: "Equal"
-          value: "true"
-          effect: "NoSchedule"
-
-  # For production: external database
+  # Database Configuration
+  # By default, n8n uses SQLite (stored in the persistent volume)
+  # For production: use external PostgreSQL (RDS)
   # To use external DB:
-  # 1. Set postgresql.enabled: false
+  # 1. Uncomment db.type: postgresdb in main.config above
   # 2. Uncomment db.postgresdb settings in main.config above
   # 3. Set password in secrets.yaml under main.secret.db.postgresdb.password
 
