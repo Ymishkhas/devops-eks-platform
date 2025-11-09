@@ -212,6 +212,16 @@ prometheus-stack:
           handleGrafanaManagedAlerts: true
           implementation: prometheus
     
+    # Additional datasources    
+    additionalDataSources:
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki-gateway.monitoring.svc.cluster.local:80
+        jsonData:
+          maxLines: 5000
+          tlsSkipVerify: true
+        editable: false
     # Enable ServiceMonitor for Prometheus scraping
     serviceMonitor:
       enabled: true
