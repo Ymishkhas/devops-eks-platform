@@ -6,4 +6,3 @@ app:
   values: values.yaml
   extraValues: ../dummy.yaml
   secrets: secrets.yaml
-  serverSideApply: false

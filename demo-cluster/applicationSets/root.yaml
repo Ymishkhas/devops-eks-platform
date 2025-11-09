@@ -39,7 +39,9 @@ spec:
         syncOptions:
           - CreateNamespace=true
           - ApplyOutOfSyncOnly=true
-          - ServerSideApply={{ .app.serverSideApply }} 
+          {{- if default false .app.serverSideApply }}
+          - ServerSideApply=true
+          {{- end }}
           - RespectIgnoreDifferences=true 
         automated:
           prune: true
@@ -49,10 +51,12 @@ spec:
         - group: admissionregistration.k8s.io
           kind: ValidatingWebhookConfiguration
           name: istio-validator-istio-system
-          jsonPointers:
-            - /webhooks/0/failurePolicy
+          jqPathExpressions:
+            - '.webhooks[]?.clientConfig.caBundle'
+            - '.webhooks[]?.failurePolicy'
         - group: admissionregistration.k8s.io
           kind: ValidatingWebhookConfiguration
           name: istiod-default-validator
-          jsonPointers:
-            - /webhooks/0/failurePolicy
+          jqPathExpressions:
+            - '.webhooks[]?.clientConfig.caBundle'
+            - '.webhooks[]?.failurePolicy'
