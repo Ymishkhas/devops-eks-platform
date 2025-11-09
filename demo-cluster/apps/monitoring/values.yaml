@@ -175,14 +175,14 @@ prometheus-stack:
     
     # Persistence (disabled for Kind, enable for EKS with EBS gp3)
     persistence:
-      enabled: true
-      type: pvc
-      storageClassName: gp3
-      # Don't use existingClaim - let it create the PVC automatically
-      # existingClaim: pvc-grafana
-      accessModes:
-        - ReadWriteOnce
-      size: 10Gi
+      enabled: false
+      # type: pvc
+      # storageClassName: gp3
+      # # Don't use existingClaim - let it create the PVC automatically
+      # # existingClaim: pvc-grafana
+      # accessModes:
+      #   - ReadWriteOnce
+      # size: 10Gi
 
     # serviceAccount:
     # create: true
