@@ -1,0 +1,8 @@
+app:
+  name: observability
+  releaseName: observability
+  namespace: monitoring
+  project: utilities
+  values: values.yaml
+  extraValues: ../dummy.yaml
+  secrets: secrets.yaml

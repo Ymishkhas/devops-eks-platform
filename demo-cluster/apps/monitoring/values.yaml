@@ -1,0 +1,324 @@
+prometheus-stack:
+
+  # Promethueus
+  #--------------------------------------------------------------------------------------------------
+  # CRDs for Prometheus Operator (ServiceMonitor, PrometheusRule, etc.)
+  crds:
+    enabled: true
+    tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+
+  # Prometheus server configuration
+  prometheus:
+    enabled: true
+    
+    prometheusSpec:
+      retention: 7d    
+      replicas: 1
+      resources:
+        limits:
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+      
+      # Storage (disabled for Kind, enable for EKS)
+      storageSpec: {}
+      # EKS: Uncomment this
+      # storageSpec:
+      #   volumeClaimTemplate:
+      #     spec:
+      #       storageClassName: gp3
+      #       accessModes: ["ReadWriteOnce"]
+      #       resources:
+      #         requests:
+      #           storage: 30Gi
+      
+      # Which PrometheusRules to watch (must match ArgoCD label)
+      ruleSelector:
+        matchLabels:
+          release: observability
+      
+      # Which ServiceMonitors to watch
+      serviceMonitorSelector:
+        matchLabels:
+          release: observability
+    
+      tolerations:
+        - key: "CriticalAddonsOnly"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"
+
+  # Prometheus Operator (manages Prometheus CRDs)
+  prometheusOperator:
+    enabled: true
+    admissionWebhooks:
+      deployment:
+        enabled: true
+        serviceAccount:
+          automountServiceAccountToken: false
+          create: true
+        resources:
+          limits:
+            memory: 300Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        podLabels:
+          sub-unit: prometheus-admission-webhook
+        tolerations:
+          - key: "CriticalAddonsOnly"
+            operator: "Equal"
+            value: "true"
+            effect: "NoSchedule"
+
+      patch:
+        enabled: true
+        tolerations:
+          - key: "CriticalAddonsOnly"
+            operator: "Equal"
+            value: "true"
+            effect: "NoSchedule"
+
+    tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+
+  # Node Exporter (collects host-level metrics: CPU, memory, disk)
+  nodeExporter:
+    enabled: true
+
+  prometheus-node-exporter:
+    prometheus:
+      monitor:
+        enabled: true
+        additionalLabels:
+          release: observability
+
+  # Kube State Metrics (Kubernetes object metrics: pods, deployments, etc.)
+  kubeStateMetrics:
+    enabled: true
+
+  kube-state-metrics:
+    prometheus:
+      monitor:
+        enabled: true
+        additionalLabels:
+          release: observability
+
+  # Kubernetes component monitoring
+  kubeApiServer:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: observability
+
+  kubelet:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: observability
+
+  kubeControllerManager:
+    enabled: false  # Not accessible in Kind/EKS
+
+  kubeScheduler:
+    enabled: false  # Not accessible in Kind/EKS
+
+  kubeProxy:
+    enabled: true
+    service:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: observability
+
+  coreDns:
+    enabled: true
+    service:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: observability
+
+
+  # Grafana
+  #--------------------------------------------------------------------------------------------------
+  grafana:
+    enabled: true  
+    replicas: 1
+    resources:
+      limits:
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    
+    # Admin credentials (from secrets.yaml)
+    # admin:admin / changeme:changeme
+    
+    # Persistence (disabled for Kind)
+    persistence:
+      enabled: false
+    # EKS: Enable with EFS
+    # persistence:
+    #   enabled: true
+    #   type: pvc
+    #   storageClassName: efs-sc
+    #   existingClaim: pvc-grafana
+    #   accessModes:
+    #     - ReadWriteOnce
+    #   size: 30Gi
+    #   finalizers:
+    #     - kubernetes.io/pvc-protection
+
+    # serviceAccount:
+    # create: true
+    # name: grafana-sa
+    # autoMount: true
+    # annotations:
+    #   eks.amazonaws.com/role-arn: arn:aws:iam::412514615512:role/eks-sa-grafana-dev
+
+    
+    # Grafana configuration
+    grafana.ini:
+      server:
+        root_url: http://grafana.localhost  # KIND
+        # root_url: https://grafana.ymishkhas.cloud  # EKS
+    
+    # Auto-import dashboards from ConfigMaps
+    sidecar:
+      dashboards:
+        enabled: true
+        enableNewTablePanelSyntax: true
+      datasources:
+        enabled: true
+        uid: prometheus
+        alertmanager:
+          enabled: true
+          uid: alertmanager
+          handleGrafanaManagedAlerts: true
+          implementation: prometheus
+    
+    # Enable ServiceMonitor for Prometheus scraping
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: observability
+    
+    # Service type
+    service:
+      type: ClusterIP  # Istio will expose this
+
+    tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+
+
+  # AlertManager
+  #--------------------------------------------------------------------------------------------------
+  alertmanager:
+    enabled: true
+    alertmanagerSpec:
+      replicas: 1    
+      retention: 120h
+      resources:
+        limits:
+          memory: 256Mi
+        requests:
+          cpu: 50m
+          memory: 128Mi
+      tolerations:
+        - key: "CriticalAddonsOnly"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"
+
+    # Alert routing configuration
+    config:
+      global:
+        resolve_timeout: 5m
+      
+      # Alert routing rules
+      route:
+        group_by: ['alertname']
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 12h
+        receiver: 'devops-team'
+        
+        # Route specific alerts
+        routes:
+          - receiver: 'devops-team'
+            matchers:
+              - 'team =~ devops|cloud'
+      inhibit_rules:
+        - source_matchers:
+            - 'severity = critical'
+          target_matchers:
+            - 'severity =~ warning|info'
+          equal:
+            - 'namespace'
+            - 'alertname'
+        - source_matchers:
+            - 'severity = warning'
+          target_matchers:
+            - 'severity = info'
+          equal:
+            - 'namespace'
+            - 'alertname'
+        - source_matchers:
+            - 'alertname = InfoInhibitor'
+          target_matchers:
+            - 'severity = info'
+          equal:
+            - 'namespace'
+        - target_matchers:
+            - 'alertname = InfoInhibitor'
+      templateFiles:
+      # ref: https://prometheus.io/docs/alerting/latest/notifications/
+        global.tmpl: |
+          {{ define "URL" }}{{ .ExternalURL | reReplaceAll ".*alertmanager\\.(.*)" "$1" }}{{ end }}
+        discord.tmpl: |
+          {{ define "discord.techrar.title" -}}
+            {{- $first := index .Alerts 0 -}}
+            [{{ $first.Status | toUpper }}]
+          {{- end }}
+          {{ define "discord.techrar.message" -}}
+            {{- $root := . -}}
+            {{- range .Alerts }}
+              **Alert:** {{ .Labels.alertname }}  
+              **Severity:** {{ .Labels.severity | toUpper }}  
+              {{- if .Annotations.description }}
+              **Description:** {{ .Annotations.description }}
+              {{- else if .Annotations.message }}
+              **Description:** {{ .Annotations.message }}
+              {{- end }}
+              **StartedAt:** {{ .StartsAt }}
+              **Link:** {{ template "URL" $root }}  
+
+              **Details:**
+              {{- range .Labels.SortedPairs }}
+              • **{{ .Name }}:** {{ .Value }}
+              {{- end }}
+              {{ println "" }}
+            {{- end }}
+          {{- end }}
+
+    # ServiceMonitor for Prometheus
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: observability
