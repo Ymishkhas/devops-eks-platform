@@ -39,6 +39,8 @@ spec:
         syncOptions:
           - CreateNamespace=true
           - ApplyOutOfSyncOnly=true
+          - ServerSideApply={{ .app.serverSideApply }} 
+          - RespectIgnoreDifferences=true 
         automated:
           prune: true
           selfHeal: true

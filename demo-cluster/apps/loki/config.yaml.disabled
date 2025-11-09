@@ -6,3 +6,4 @@ app:
   values: values.yaml
   extraValues: alloy.yaml
   secrets: secrets.yaml
+  serverSideApply: false
