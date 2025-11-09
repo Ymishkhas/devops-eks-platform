@@ -1,5 +1,19 @@
 prometheus-stack:
 
+  # Override image registries to avoid quay.io network issues
+  # Use public.ecr.aws which has better connectivity
+  prometheusOperator:
+    image:
+      registry: public.ecr.aws
+      repository: docker/prometheus-operator/prometheus-operator
+      tag: v0.83.0
+
+  prometheus-node-exporter:
+    image:
+      registry: public.ecr.aws
+      repository: docker/prometheus/node-exporter
+      tag: v1.9.1
+
   # Promethueus
   #--------------------------------------------------------------------------------------------------
   # CRDs for Prometheus Operator (ServiceMonitor, PrometheusRule, etc.)
