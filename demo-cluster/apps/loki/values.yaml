@@ -1,11 +1,6 @@
 loki:
   deploymentMode: SimpleScalable
   
-  # Replication factor - set to 1 for single replica setups (dev/test)
-  # For production, set to 3 and scale write replicas to 3+
-  commonConfig:
-    replication_factor: 1
-  
   # Memcached for caching (disabled for dev)
   chunksCache:
     enabled: false
@@ -27,6 +22,11 @@ loki:
   
   loki:
     auth_enabled: false  # No multi-tenancy
+    
+    # Structured config overrides
+    structuredConfig:
+      common:
+        replication_factor: 1
 
     compactor:
       compaction_interval: 10m
@@ -136,10 +136,10 @@ loki:
       retention: drop
     resources:
       limits:
-        memory: 1500Mi
+        memory: 800Mi
       requests:
-        cpu: 200m
-        memory: 1000Mi
+        cpu: 100m
+        memory: 400Mi
   
   read:
     replicas: 1
@@ -159,10 +159,10 @@ loki:
       retention: drop
     resources:
       limits:
-        memory: 1500Mi
+        memory: 600Mi
       requests:
-        cpu: 300m
-        memory: 800Mi
+        cpu: 100m
+        memory: 300Mi
   
   backend:
     replicas: 1
