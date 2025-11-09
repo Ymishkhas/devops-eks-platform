@@ -217,7 +217,7 @@ prometheus-stack:
       - name: Loki
         type: loki
         access: proxy
-        url: http://loki-gateway.monitoring.svc.cluster.local.:80
+        url: http://loki-gateway.monitoring.svc.cluster.local
         jsonData:
           maxLines: 5000
           tlsSkipVerify: true
