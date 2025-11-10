@@ -50,6 +50,8 @@ spec:
           kind: Deployment
           jsonPointers:
           - /spec/replicas
+          jqPathExpressions:
+          - .spec.template.spec.containers[].env[]?.valueFrom.resourceFieldRef.divisor
         - group: apps
           kind: StatefulSet
           jsonPointers:
