@@ -1,5 +1,27 @@
 resources:
-  # Istio Gateway (Layer 1: Entry Point)
+  - apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: global-alb-ingress
+      namespace: istio-system
+      annotations:
+        alb.ingress.kubernetes.io/scheme: internet-facing
+        alb.ingress.kubernetes.io/target-type: ip
+        alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:412514615512:certificate/0c94cd03-449e-4758-83a3-8d1520a71d20
+        alb.ingress.kubernetes.io/success-codes: '200,404,301'
+    spec:
+      ingressClassName: alb
+      rules:
+      - host: "*.ymishkhas.cloud"
+        http:
+          paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: istio-gateway
+                port:
+                  number: 80
   - apiVersion: networking.istio.io/v1
     kind: Gateway
     metadata:
@@ -12,16 +34,7 @@ resources:
       - port:
           number: 80
           name: http
-          protocol: HTTP
-        hosts:
-        - "*"
-        tls:
-          httpsRedirect: true
-      # HTTPS - Receives decrypted HTTP traffic from ELB
-      - port:
-          number: 443
-          name: https
-          protocol: HTTP  # HTTP because ELB already decrypted TLS
+          protocol: HTTP  # Receives traffic from ALB (already decrypted)
         hosts:
         - "*"
 

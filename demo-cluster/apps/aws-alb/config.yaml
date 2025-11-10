@@ -1,0 +1,8 @@
+app:
+  name: aws-alb-ingress
+  releaseName: aws-alb
+  namespace: kube-system
+  project: utilities
+  values: values.yaml
+  extraValues: ../dummy.yaml
+  secrets: secrets.yaml
