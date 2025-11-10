@@ -28,3 +28,14 @@ projects:
     clusterResourceWhitelist:
       - group: '*'
         kind: '*'
+  data:
+    description: data applications
+    namespace: argocd
+    sourceRepos:
+      - '*'
+    destinations:
+      - namespace: '*'
+        server: '*'
+    clusterResourceWhitelist:
+      - group: '*'
+        kind: '*'
