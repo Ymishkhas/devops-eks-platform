@@ -70,9 +70,9 @@ module "eks" {
       launch_template_use_name_prefix = false
       use_name_prefix = false
       ami_type       = "AL2023_x86_64_STANDARD"
-      min_size     = 3
-      max_size     = 3
-      desired_size = 3
+      min_size     = 4
+      max_size     = 4
+      desired_size = 4
 
       use_latest_ami_release_version = false
       ami_release_version="1.33.5-20251103"

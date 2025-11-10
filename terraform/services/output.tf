@@ -15,3 +15,8 @@ output "argocd_irsa_role_arn" {
   description = "ARN of the ArgoCD IRSA role"
   value       = module.argocd_irsa.iam_role_arn
 }
+
+output "alb_controller_role_arn" {
+  description = "ARN of the IAM role for AWS Load Balancer Controller"
+  value       = module.alb_irsa.iam_role_arn
+}
