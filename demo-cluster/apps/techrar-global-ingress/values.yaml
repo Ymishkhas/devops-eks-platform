@@ -97,7 +97,7 @@ resources:
                 prefix: /
           route:
             - destination:
-                host: observability-kube-prometh-prometheus.monitoring.svc.cluster.local
+                host: prometheus-operated.monitoring.svc.cluster.local
                 port:
                   number: 9090
 
