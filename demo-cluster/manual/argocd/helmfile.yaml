@@ -81,7 +81,6 @@ releases:
       - ./values.yaml
     # secrets:
     #   - ./secrets.yaml
-      # - ./repos-secrets.yaml
   
   # ---------------------------------------------------------------------------
   # RELEASE 2: ArgoCD Projects

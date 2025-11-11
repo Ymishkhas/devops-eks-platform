@@ -1,0 +1,55 @@
+global:
+  azure:
+    images:
+      bytebase:
+        tag: latest
+        image: bytebase/bytebase
+        registry: docker.io
+
+bytebase:
+  version: latest
+  registryMirrorHost: ""
+  option:
+    port: 8080
+    data: "/var/opt/bytebase"
+    external-url: "http://db.localhost"
+    externalPg:
+      url: "postgresql://bytebase:bytebase@postgres-postgresql:5432/bytebase"
+      # If users need to read the pgURL from a secret, they can specify the secret name and key here.
+      # Bytebase will ignore the bytebase.option.externalPg.url if this is specified.
+      # existingPgURLSecret: ""
+      # existingPgURLSecretKey: ""
+      # pgHost: "host"
+      # pgPort: "port"
+      # pgUsername: "username"
+      # pgPassword: "password"
+      # pgDatabase: "database"
+      # existingPgPasswordSecret: ""
+      # existingPgPasswordSecretKey: ""
+      # escapePassword controls whether to escape the password in the connection string,
+      # this is useful when the password contains special characters and it is read from a secret.
+      # It's only be applied in pgPassword or existingPgPasswordSecret.
+      # NOTE: This is an experimental feature and it may be removed in the future without any notice!!!
+      escapePassword: false
+  persistence:
+    enabled: false
+    existingClaim: ""
+    storage: 20Gi
+    # storageClass: "gp3" #TODO: uncomment this
+  resources: {}
+  #    limits:
+  #      cpu: 2000m
+  #      memory: 4Gi
+  #    requests:
+  #      cpu: 1000m
+  #      memory: 1Gi
+
+  # affinity: #TODO: uncomment this
+  #   nodeAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #       nodeSelectorTerms:
+  #         - matchExpressions:
+  #             - key: role
+  #               operator: In
+  #               values:
+  #                 - critical
