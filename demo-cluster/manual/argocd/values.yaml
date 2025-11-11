@@ -118,6 +118,14 @@ redis:
       operator: "Equal"
       value: "true"
       effect: "NoSchedule"
+
+# Tolerations for the redis-secret-init job
+redisSecretInit:
+  tolerations:
+    - key: "CriticalAddonsOnly"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
   
 # redis-ha:
 #   enabled: true  # ← EKS (Redis cluster with sentinel)

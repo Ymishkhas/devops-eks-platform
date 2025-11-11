@@ -97,6 +97,11 @@ loki:
     replicas: 1
     verboseLogging: false
     
+    # Exclude gateway from ServiceMonitor (nginx doesn't expose /metrics)
+    service:
+      labels:
+        prometheus.io/service-monitor: "false"
+    
     tolerations:
       - key: "CriticalAddonsOnly"
         operator: "Equal"
