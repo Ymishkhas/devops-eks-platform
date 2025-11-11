@@ -133,3 +133,20 @@ resources:
       - interval: 30s
         path: /metrics
         port: http-monitoring
+  
+  # To see istio gateway logs,
+  - apiVersion: telemetry.istio.io/v1
+    kind: Telemetry
+    metadata:
+      name: gateway-access-logs-metrics
+      namespace: istio-system
+    spec:
+      selector:
+        matchLabels:
+          istio: gateway
+      accessLogging:
+        - providers:
+          - name: envoy
+      metrics:
+        - providers:
+          - name: prometheus
